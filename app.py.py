@@ -6,44 +6,48 @@ import os
 # Set the name of the CSV file
 CSV_FILE = "data.csv"
 
+# Load existing data if the CSV file exists
+if os.path.exists(CSV_FILE):
+    df = pd.read_csv(CSV_FILE)
+else:
+    df = pd.DataFrame(columns=["Date", "Members"])
+
 # Function to add a new entry
-def add_entry(value):
-    # Get the current date
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    
-    # Create a new entry
-    new_entry = {"Date": current_date, "Value": value}
-    
-    # Check if the CSV file exists
-    if os.path.exists(CSV_FILE):
-        # Append the new entry to the existing file
-        df = pd.read_csv(CSV_FILE)
-        df = df.append(new_entry, ignore_index=True)
-    else:
-        # Create a new DataFrame for the new entry
-        df = pd.DataFrame([new_entry])
-    
-    # Save the DataFrame to the CSV file
+def add_entry(date, value):
+    new_entry = {"Date": date, "Members": value}
+    df.loc[len(df)] = new_entry
     df.to_csv(CSV_FILE, index=False)
     st.success("Entry added successfully!")
 
-# Streamlit app UI
-st.title("Store Values with Current Date")
+# Streamlit UI
+st.title("Store and Edit Member Data")
 
-# Input field for the value
-value = st.text_input("Enter a value:")
+# Input fields for manual entry
+col1, col2 = st.columns(2)
+with col1:
+    selected_date = st.date_input("Select a Date", datetime.today())
+with col2:
+    value = st.text_input("Enter number of members:")
 
-# Button to save the value
+# Save button
 if st.button("Save"):
-    if value.strip():
-        add_entry(value)
+    if value.strip().isdigit():
+        add_entry(selected_date.strftime("%Y-%m-%d"), int(value))
     else:
-        st.error("Please enter a valid value.")
+        st.error("Please enter a valid numeric value.")
 
-# Display the current content of the CSV file
+# Display existing data with edit functionality
 st.subheader("Current Data")
-if os.path.exists(CSV_FILE):
-    data = pd.read_csv(CSV_FILE)
-    st.dataframe(data)
+if not df.empty:
+    edited_df = st.data_editor(df, num_rows="dynamic")  # Allows editing
+
+    # Save changes
+    if st.button("Update Data"):
+        edited_df.to_csv(CSV_FILE, index=False)
+        st.success("Data updated successfully!")
+
+    # Total calculation
+    total_amount = edited_df["Members"].sum() * 60
+    st.subheader(f"Total Amount: {total_amount} RS")
 else:
     st.write("No data available yet.")
